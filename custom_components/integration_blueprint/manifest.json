@@ -1,0 +1,12 @@
+{
+  "domain": "cleanpay_ha",
+  "name": "Cleanpay App",
+  "codeowners": [
+    "@kelaban"
+  ],
+  "config_flow": true,
+  "documentation": "https://github.com/kelaban/cleanpay_ha",
+  "iot_class": "cloud_polling",
+  "issue_tracker": "https://github.com/kelaban/cleanpay_ha/issues",
+  "version": "0.1.0"
+}

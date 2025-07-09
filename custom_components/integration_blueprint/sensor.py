@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 import logging
-from typing import TYPE_CHECKING, Callable
+from typing import TYPE_CHECKING, Any, Callable, Literal
 
 from homeassistant.components.sensor import SensorEntity, SensorEntityDescription, SensorDeviceClass
 from homeassistant.core import HomeAssistant
@@ -12,7 +12,7 @@ from homeassistant.helpers.typing import StateType
 
 from .entity import CleanPayLaundryRoomEntity
 
-from cleanpay_api import Washer
+from cleanpay_api import Washer, Dryer
 
 if TYPE_CHECKING:
     from homeassistant.core import HomeAssistant
@@ -34,9 +34,18 @@ ENTITY_DESCRIPTIONS = (
 )
 
 @dataclass(kw_only=True, frozen=True)
-class WashingMachineSensorEntityDescription(SensorEntityDescription):
+class MachineSensorEntityDescription(SensorEntityDescription):
     label_id: str
-    value_fn: Callable[[Washer], StateType]
+    type: Literal["washer"] | Literal["dryer"]
+    value_fn: Callable[[Washer | Dryer], StateType]
+
+def status_to_text(status: str) -> str:
+    status_map = {
+        "7": "Available",
+        "4": "Running",
+        "5": "Finished",
+    }
+    return status_map.get(status, status)
 
 
 async def async_setup_entry(
@@ -46,47 +55,78 @@ async def async_setup_entry(
 ) -> None:
     """Set up the sensor platform."""
 
-    washers_entities = []
+    entities = []
     for entity in entry.runtime_data.coordinator.data.room_status.washers:
-        washers_entities.extend(
+        entities.extend(
             [
                 CleanPayWashingMachineSensor(
                     coordinator=entry.runtime_data.coordinator,
-                    entity_description=WashingMachineSensorEntityDescription(
+                    entity_description=MachineSensorEntityDescription(
                         key=f"cleanpay_washer_{entity.label_id}",
                         name=f"CleanPay Washer {entity.label_id}",
+                        type="washer",
                         label_id=entity.label_id,
-                        value_fn=lambda washer: washer.status_text,
+                        value_fn=lambda a: status_to_text(a.satus),
                         device_class=SensorDeviceClass.ENUM,
                     ),
                 ),
                 CleanPayWashingMachineSensor(
                     coordinator=entry.runtime_data.coordinator,
-                    entity_description=WashingMachineSensorEntityDescription(
+                    entity_description=MachineSensorEntityDescription(
                         key=f"cleanpay_washer_{entity.label_id}_timeleft",
                         name=f"CleanPay Washer {entity.label_id} Time Left",
+                        type="washer",
                         label_id=entity.label_id,
-                        value_fn=lambda washer: int(washer.left_time or 0),
+                        value_fn=lambda a: int(a.left_time or 0) / 60,
                         device_class=SensorDeviceClass.DURATION,
-                        native_unit_of_measurement="min",
+                        native_unit_of_measurement="m",
                     ),
                 ),
             ]
         )
 
-    async_add_entities(washers_entities)
+    for entity in entry.runtime_data.coordinator.data.room_status.dryers:
+        entities.extend(
+            [
+                CleanPayWashingMachineSensor(
+                    coordinator=entry.runtime_data.coordinator,
+                    entity_description=MachineSensorEntityDescription(
+                        key=f"cleanpay_dryer_{entity.label_id}",
+                        name=f"CleanPay Dryer {entity.label_id}",
+                        type="dryer",
+                        label_id=entity.label_id,
+                        value_fn=lambda a: status_to_text(a.satus),
+                        device_class=SensorDeviceClass.ENUM,
+                    ),
+                ),
+                CleanPayWashingMachineSensor(
+                    coordinator=entry.runtime_data.coordinator,
+                    entity_description=MachineSensorEntityDescription(
+                        key=f"cleanpay_dryer_{entity.label_id}_timeleft",
+                        name=f"CleanPay Dryer {entity.label_id}",
+                        type="dryer",
+                        label_id=entity.label_id,
+                        value_fn=lambda a: int(a.left_time or 0) / 60,
+                        device_class=SensorDeviceClass.DURATION,
+                        native_unit_of_measurement="m",
+                    ),
+                ),
+            ]
+        )
+
+    async_add_entities(entities)
 
 
 class CleanPayWashingMachineSensor(CleanPayLaundryRoomEntity, SensorEntity):
     """integration_blueprint Sensor class."""
 
     _attr_icon = ICON_WASHING_MACHINE
-    entity_description: WashingMachineSensorEntityDescription
+    entity_description: MachineSensorEntityDescription
 
     def __init__(
         self,
         coordinator: CleanPayDataUpdateCoordinator,
-        entity_description: WashingMachineSensorEntityDescription,
+        entity_description: MachineSensorEntityDescription,
     ) -> None:
         """Initialize the sensor class."""
         super().__init__(coordinator, entity_description.label_id)
@@ -101,9 +141,22 @@ class CleanPayWashingMachineSensor(CleanPayLaundryRoomEntity, SensorEntity):
         return self.entity_description.value_fn(self._appliance)
 
     @property
-    def _appliance(self) -> Washer:
+    def extra_state_attributes(self) -> dict[str, Any]:
+        """Return extra attributes for the sensor."""
+        appliance = self._appliance
+        return {
+            "label_id": appliance.label_id,
+            "status": appliance.status_text,
+        }
+
+    @property
+    def _appliance(self) -> Washer | Dryer:
+        if self.entity_description.type == "washer":
+            entities = self.coordinator.data.room_status.washers
+        else:
+            entities = self.coordinator.data.room_status.dryers
         return [
             w
-            for w in self.coordinator.data.room_status.washers
+            for w in entities
             if w.label_id == self.entity_description.label_id
         ][0]

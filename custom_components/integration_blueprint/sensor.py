@@ -103,7 +103,7 @@ async def async_setup_entry(
                     coordinator=entry.runtime_data.coordinator,
                     entity_description=MachineSensorEntityDescription(
                         key=f"cleanpay_dryer_{entity.label_id}_timeleft",
-                        name=f"CleanPay Dryer {entity.label_id}",
+                        name=f"CleanPay Dryer {entity.label_id} Time Left",
                         type="dryer",
                         label_id=entity.label_id,
                         value_fn=lambda a: int(a.left_time or 0) / 60,
@@ -120,7 +120,6 @@ async def async_setup_entry(
 class CleanPayWashingMachineSensor(CleanPayLaundryRoomEntity, SensorEntity):
     """integration_blueprint Sensor class."""
 
-    _attr_icon = ICON_WASHING_MACHINE
     entity_description: MachineSensorEntityDescription
 
     def __init__(
@@ -134,6 +133,7 @@ class CleanPayWashingMachineSensor(CleanPayLaundryRoomEntity, SensorEntity):
             f"{coordinator.config_entry.unique_id}-cleanpay-{entity_description.key}"
         )
         self.entity_description = entity_description
+        self._attr_icon = ICON_WASHING_MACHINE if entity_description.type == "washer" else ICON_DRYING_MACHINE
 
     @property
     def native_value(self) -> StateType:

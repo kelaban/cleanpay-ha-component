@@ -1,5 +1,5 @@
 {
-    "name": "Integration blueprint",
-    "homeassistant": "2025.2.4",
+    "name": "Clean Pay HA Component",
+    "homeassistant": "2025.7.1",
     "hacs": "2.0.1"
 }

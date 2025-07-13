@@ -4,6 +4,9 @@
   "codeowners": [
     "@kelaban"
   ],
+  "requirements": [
+    "git+https://github.com/kelaban/cleanpay-api.git"
+  ],
   "config_flow": true,
   "documentation": "https://github.com/kelaban/cleanpay_ha",
   "iot_class": "cloud_polling",

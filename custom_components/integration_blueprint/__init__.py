@@ -38,7 +38,7 @@ async def async_setup_entry(
         hass=hass,
         logger=LOGGER,
         name=DOMAIN,
-        update_interval=timedelta(minutes=10),
+        update_interval=timedelta(minutes=5),
     )
     entry.runtime_data = CleanPayConfigData(
         userid=entry.data[CONF_ID],

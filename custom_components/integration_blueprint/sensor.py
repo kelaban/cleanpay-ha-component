@@ -116,7 +116,6 @@ async def async_setup_entry(
 
     async_add_entities(entities)
 
-
 class CleanPayWashingMachineSensor(CleanPayLaundryRoomEntity, SensorEntity):
     """integration_blueprint Sensor class."""
 
@@ -128,7 +127,7 @@ class CleanPayWashingMachineSensor(CleanPayLaundryRoomEntity, SensorEntity):
         entity_description: MachineSensorEntityDescription,
     ) -> None:
         """Initialize the sensor class."""
-        super().__init__(coordinator, entity_description.label_id)
+        super().__init__(coordinator, entity_description.label_id, entity_description.type.title())
         self._attr_unique_id = (
             f"{coordinator.config_entry.unique_id}-cleanpay-{entity_description.key}"
         )
